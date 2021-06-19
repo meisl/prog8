@@ -37,10 +37,7 @@ class ModuleImporter(private val program: Program,
         }
         else
             println("")
-        if(!Files.isReadable(filePath))
-            throw ParsingFailedError("No such file: $filePath")
 
-        //return importModule(CharStreams.fromPath(filePath), filePath, false)
         val module = Prog8Parser.parseModule(filePath)
         //moduleAst.isLibraryModule = isLibrary
         //moduleAst.source = modulePath
