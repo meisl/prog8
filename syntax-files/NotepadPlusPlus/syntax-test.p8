@@ -3,18 +3,18 @@
 %zeropage basicsafe
 %option no_sysinit
 ; simple line comment; consecutive lines can be folded
-; TODO: something
+; TODO: comments with "TODO" or "FIXME" are highlited
 ; FIXME #31
 main {
-	str   input = "string literal\r\n\"\\"
+	str   input = "string literal with escapes: \r\n\"\\"
 	ubyte c = 'x' ; character literal in bold
-	ubyte decimal = 0 + 1 - 2 * 3
-	float pi = 3.1415
-	ubyte boolean = true or false and true xor not false
-	str   temp  = "?"
+	byte  decimal = (0 + 1 - 2 * 3) / 4 % 5
 	word[] numbers = [$80ea, %0101011, 23]
-	inline asmsub foo(ubyte char @A) clobbers(Y) {
-		asm {{
+	const float pi = 3.1415
+	const ubyte boolean = true or false and true xor not false
+	uword dead = ($beef >> 1) | $cafe & $babe ^ ~%1010101 
+	inline asmsub foo(ubyte char @A) clobbers(Y) -> ubyte @A {
+		%asm {{
 			a_label:
 						nop			; comment inside asm
 						bcc _done
@@ -22,8 +22,9 @@ main {
 			_done:		rts
 		}} 
 	}
-	inline sub start(ubyte char @A) -> void {
-		ubyte @zp ch = min(max, n, (x, 5))
+	sub start(ubyte char) -> ubyte {
+		ubyte @zp ch = min(numbers)
+		void foo()
 		if (true) {
 			goto nirvana
 		} else {
@@ -37,14 +38,7 @@ main {
 				}
 				else -> {
 					temp[0] = ch
-					txt.print(temp) ; wrongly optimized to
-					;      lda #$3f
-					;      jsr txt.chrout
-
-					; with -noopt the above line is correctly turned into
-					;      ldy  #>temp
-					;      ldy  #<temp
-					;      jsr  txt.print
+					txt.print(temp)
 				}
 			}
 			index++
