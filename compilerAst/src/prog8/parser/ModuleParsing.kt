@@ -18,8 +18,6 @@ import java.nio.file.Paths
 
 class ParsingFailedError(override var message: String) : Exception(message)
 
-internal class CustomLexer(val modulePath: Path, input: CharStream?) : prog8Lexer(input)
-
 fun moduleName(fileName: Path) = fileName.toString().substringBeforeLast('.')
 
 internal fun pathFrom(stringPath: String, vararg rest: String): Path  = FileSystems.getDefault().getPath(stringPath, *rest)
@@ -44,7 +42,10 @@ class ModuleImporter(private val program: Program,
         if(!Files.isReadable(filePath))
             throw ParsingFailedError("No such file: $filePath")
 
-        return importModule(CharStreams.fromPath(filePath), filePath, false)
+        val content = filePath.toFile().readText()
+        val cs = CharStreams.fromString(content)
+
+        return importModule(cs, filePath, false)
     }
 
     fun importLibraryModule(name: String): Module? {
@@ -54,40 +55,14 @@ class ModuleImporter(private val program: Program,
         return executeImportDirective(import, Paths.get(""))
     }
 
-    private class MyErrorListener: ConsoleErrorListener() {
-        var  numberOfErrors: Int = 0
-        override fun syntaxError(recognizer: Recognizer<*, *>?, offendingSymbol: Any?, line: Int, charPositionInLine: Int, msg: String, e: RecognitionException?) {
-            numberOfErrors++
-            when (recognizer) {
-                is CustomLexer -> System.err.println("${recognizer.modulePath}:$line:$charPositionInLine: $msg")
-                is prog8Parser -> System.err.println("${recognizer.inputStream.sourceName}:$line:$charPositionInLine: $msg")
-                else -> System.err.println("$line:$charPositionInLine $msg")
-            }
-            if(numberOfErrors>=5)
-                throw ParsingFailedError("There are too many parse errors. Stopping.")
-        }
-    }
-
     private fun importModule(stream: CharStream, modulePath: Path, isLibrary: Boolean): Module {
-        val moduleName = moduleName(modulePath.fileName)
-        val lexer = CustomLexer(modulePath, stream)
-        lexer.removeErrorListeners()
-        val lexerErrors = MyErrorListener()
-        lexer.addErrorListener(lexerErrors)
-        val tokens = CommentHandlingTokenStream(lexer)
-        val parser = prog8Parser(tokens)
-        parser.removeErrorListeners()
-        parser.addErrorListener(MyErrorListener())
-        val parseTree = parser.module()
-        val numberOfErrors = parser.numberOfSyntaxErrors + lexerErrors.numberOfErrors
-        if(numberOfErrors > 0)
-            throw ParsingFailedError("There are $numberOfErrors errors in '$moduleName'.")
+        val parser = Prog8Parser()
+        val sourceText = stream.toString()
+        val moduleAst = parser.parseModule(sourceText)
 
-        // You can do something with the parsed comments:
-        // tokens.commentTokens().forEach { println(it) }
+        //moduleAst.isLibraryModule = isLibrary
+        //moduleAst.source = modulePath
 
-        // convert to Ast
-        val moduleAst = parseTree.toAst(moduleName, isLibrary, modulePath, encoder)
         moduleAst.program = program
         moduleAst.linkParents(program.namespace)
         program.modules.add(moduleAst)
@@ -121,8 +96,7 @@ class ModuleImporter(private val program: Program,
                     val (resource, resourcePath) = rsc
                     resource.use {
                         println("importing '$moduleName' (library)")
-                        val content = it.reader().readText().replace("\r\n", "\n")
-                        importModule(CharStreams.fromString(content), Paths.get("@embedded@/$resourcePath"), true)
+                        importModule(CharStreams.fromReader(it.reader(), "@embedded@/$resourcePath"), Paths.get("@embedded@/$resourcePath"), true)
                     }
                 } else {
                     val modulePath = tryGetModuleFromFile(moduleName, source, import.position)
