@@ -275,42 +275,44 @@ asmsub  scroll_up() clobbers(A, Y)  {
 	; ---- scroll the whole screen 1 character up
 	;      contents of the bottom row are unchanged, you should refill/clear this yourself
 	%asm {{
+	colsToCopy = _nextline+1	; self-modify: write columns to copy directly into code
+	rowsToCopy = P8ZP_SCRATCH_B1
 	    phx
-	    jsr  c64.SCREEN
-	    stx  _nextline+1
-	    dey
-        sty  P8ZP_SCRATCH_B1
-        stz  cx16.VERA_CTRL         ; data port 0 is source
+	    jsr  c64.SCREEN			; returns screen width in X (height in Y)
+	    stx  colsToCopy
+	    dey						; number of rows to copy = screen height - 1
+        sty  rowsToCopy
+        stz  cx16.VERA_CTRL		; data port 0 is source
         lda  #1
-        sta  cx16.VERA_ADDR_M       ; start at second line
-        stz  cx16.VERA_ADDR_L
+        sta  cx16.VERA_ADDR_M	; start at second line
+        stz  cx16.VERA_ADDR_L	; ...at x-coord 0
         lda  #%00010000
-        sta  cx16.VERA_ADDR_H       ; enable auto increment by 1, bank 0.
+        sta  cx16.VERA_ADDR_H	; enable auto increment (bit 3) by 1 (bits 4..7), bank 0 (bit 0)
 
         lda  #1
-        sta  cx16.VERA_CTRL         ; data port 1 is destination
-        stz  cx16.VERA_ADDR_M       ; start at top line
-        stz  cx16.VERA_ADDR_L
+        sta  cx16.VERA_CTRL		; data port 1 is target
+        stz  cx16.VERA_ADDR_M	; start at top line
+        stz  cx16.VERA_ADDR_L	; ...at x-coord 0
         lda  #%00010000
-        sta  cx16.VERA_ADDR_H       ; enable auto increment by 1, bank 0.
+        sta  cx16.VERA_ADDR_H	; enable auto increment (bit 3) by 1 (bits 4..7), bank 0 (bit 0)
 
 _nextline
-        ldx  #80        ; modified
+        ldx  #80        		; colsToCopy, modified at start
 -       lda  cx16.VERA_DATA0
-        sta  cx16.VERA_DATA1        ; copy char
+        sta  cx16.VERA_DATA1	; copy char
         lda  cx16.VERA_DATA0
-        sta  cx16.VERA_DATA1        ; copy color
-        dex
+        sta  cx16.VERA_DATA1	; copy color
+        dex						; colsToCopy--
         bne  -
-        dec  P8ZP_SCRATCH_B1
+        dec  rowsToCopy
         beq  +
-        stz  cx16.VERA_CTRL         ; data port 0
-        stz  cx16.VERA_ADDR_L
-        inc  cx16.VERA_ADDR_M
+        stz  cx16.VERA_CTRL		; data port 0 (source)
+        inc  cx16.VERA_ADDR_M	; y++
+        stz  cx16.VERA_ADDR_L	; x = 0
         lda  #1
-        sta  cx16.VERA_CTRL         ; data port 1
-        stz  cx16.VERA_ADDR_L
-        inc  cx16.VERA_ADDR_M
+        sta  cx16.VERA_CTRL		; data port 1 (target)
+        inc  cx16.VERA_ADDR_M	; y++
+        stz  cx16.VERA_ADDR_L	; x = 0
         bra  _nextline
 
 +       lda  #0
