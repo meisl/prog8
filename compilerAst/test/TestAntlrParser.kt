@@ -7,6 +7,7 @@ import prog8.ast.IBuiltinFunctions
 import prog8.ast.IMemSizer
 import prog8.ast.IStringEncoding
 import prog8.ast.Program
+import prog8.ast.Module
 import prog8.ast.antlr.toAst
 import prog8.ast.base.DataType
 import prog8.ast.base.Position
@@ -17,52 +18,20 @@ import prog8.ast.statements.Block
 import prog8.parser.*
 import java.nio.file.Path
 import kotlin.test.*
+import prog8.parser.Prog8Parser
 
 class TestAntlrParser {
 
-    class MyErrorListener: ConsoleErrorListener() {
-        override fun syntaxError(recognizer: Recognizer<*, *>?, offendingSymbol: Any?, line: Int, charPositionInLine: Int, msg: String, e: RecognitionException?) {
-            throw ParsingFailedError("line $line:$charPositionInLine $msg")
-        }
+    private fun parseModule(srcText: String): Module {
+        return Prog8Parser().parseModule(srcText)
     }
 
-    class MyErrorStrategy: BailErrorStrategy() {
-        override fun recover(recognizer: Parser?, e: RecognitionException?) {
-            try {
-                // let it
-                super.recover(recognizer, e) // fills in exception e in all the contexts
-                // ...then throws ParseCancellationException, which is
-                // *deliberately* not a RecognitionException. However, we don't try any
-                // error recovery, therefore report an error in this case, too.
-            } catch (pce: ParseCancellationException) {
-                reportError(recognizer, e)
-            }
-        }
-
-        override fun recoverInline(recognizer: Parser?): Token {
-            throw InputMismatchException(recognizer)
-        }
-    }
-
-    private fun parseModule(srcText: String): Prog8ANTLRParser.ModuleContext {
-        return parseModule(CharStreams.fromString(srcText))
-    }
-
-    private fun parseModule(srcFile: Path): Prog8ANTLRParser.ModuleContext {
+    private fun parseModule(srcFile: Path): Module {
         return parseModule(CharStreams.fromPath(srcFile))
     }
 
-    private fun parseModule(srcStream: CharStream): Prog8ANTLRParser.ModuleContext {
-        val errorListener = MyErrorListener()
-        val lexer = Prog8ANTLRLexer(srcStream)
-        lexer.removeErrorListeners()
-        lexer.addErrorListener(errorListener)
-        val tokens = CommonTokenStream(lexer)
-        val parser = Prog8ANTLRParser(tokens)
-        parser.errorHandler = MyErrorStrategy()
-        parser.removeErrorListeners()
-        parser.addErrorListener(errorListener)
-        return parser.module()
+    private fun parseModule(srcStream: CharStream): Module {
+        return parseModule(srcStream.toString())
     }
 
     object DummyEncoding: IStringEncoding {
@@ -91,17 +60,17 @@ class TestAntlrParser {
         val nl = "\n" // say, Unix-style (different flavours tested elsewhere)
         val srcText = "foo {" + nl + "}"   // source ends with '}' (= NO newline, issue #40)
 
-        // before the fix, Prog8ANTLRParser would have reported (thrown) "missing <EOL> at '<EOF>'"
-        val parseTree = parseModule(srcText)
-        assertEquals(parseTree.block().size, 1)
+        // #45: Prog8ANTLRParser would report (throw) "missing <EOL> at '<EOF>'"
+        val module = parseModule(srcText)
+        assertEquals(module.statements.size, 1)
     }
 
     @Test
     fun testModuleSourceMayEndWithNewline() {
         val nl = "\n" // say, Unix-style (different flavours tested elsewhere)
         val srcText = "foo {" + nl + "}" + nl  // source does end with a newline (issue #40)
-        val parseTree = parseModule(srcText)
-        assertEquals(parseTree.block().size, 1)
+        val module = parseModule(srcText)
+        assertEquals(module.statements.size, 1)
     }
 
     @Test
@@ -115,8 +84,8 @@ class TestAntlrParser {
         val srcGood = "foo {" + nl + "}" + nl + "bar {" + nl + "}"
 
         assertFailsWith<ParsingFailedError> { parseModule(srcBad) }
-        val parseTree = parseModule(srcGood)
-        assertEquals(parseTree.block().size, 2)
+        val module = parseModule(srcGood)
+        assertEquals(module.statements.size, 2)
     }
 
     @Test
@@ -143,8 +112,8 @@ class TestAntlrParser {
             "}" +
             nlUnix      // end with newline (see testModuleSourceNeedNotEndWithNewline)
 
-        val parseTree = parseModule(srcText)
-        assertEquals(parseTree.block().size, 2)
+        val module = parseModule(srcText)
+        assertEquals(module.statements.size, 2)
     }
 
     @Test
@@ -158,8 +127,8 @@ class TestAntlrParser {
             blockA {            
             }
 """
-        val parseTree = parseModule(srcText)
-        assertEquals(parseTree.block().size, 1)
+        val module = parseModule(srcText)
+        assertEquals(module.statements.size, 1)
     }
 
     @Test
@@ -175,8 +144,8 @@ class TestAntlrParser {
             blockB {            
             }
 """
-        val parseTree = parseModule(srcText)
-        assertEquals(parseTree.block().size, 2)
+        val module = parseModule(srcText)
+        assertEquals(module.statements.size, 2)
     }
 
     @Test
@@ -190,8 +159,8 @@ class TestAntlrParser {
             ; comment
             
 """
-        val parseTree = parseModule(srcText)
-        assertEquals(parseTree.block().size, 1)
+        val module = parseModule(srcText)
+        assertEquals(module.statements.size, 1)
     }
 
     @Test
@@ -237,15 +206,14 @@ class TestAntlrParser {
 
     @Test
     fun testProg8Ast() {
-        val parseTree = parseModule("""
+        val module = parseModule("""
 main {
     sub start() {
         return
     }
 }
 """)
-        val ast = parseTree.toAst("test", false, Path.of(""), DummyEncoding)
-        assertIs<Block>(ast.statements.first())
-        assertEquals((ast.statements.first() as Block).name, "main")
+        assertIs<Block>(module.statements.first())
+        assertEquals((module.statements.first() as Block).name, "main")
     }
 }
