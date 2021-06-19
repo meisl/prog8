@@ -20,7 +20,7 @@ import java.nio.file.Path
 import kotlin.test.*
 import prog8.parser.Prog8Parser
 
-class TestAntlrParser {
+class TestProg8Parser {
 
     private fun parseModule(srcText: String): Module {
         return Prog8Parser().parseModule(srcText)
