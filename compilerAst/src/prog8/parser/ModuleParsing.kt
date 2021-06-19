@@ -16,7 +16,6 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 
-class ParsingFailedError(override var message: String) : Exception(message)
 
 fun moduleName(fileName: Path) = fileName.toString().substringBeforeLast('.')
 
@@ -45,7 +44,7 @@ class ModuleImporter(private val program: Program,
         val content = filePath.toFile().readText()
         val cs = CharStreams.fromString(content)
 
-        return importModule(cs, filePath, false)
+        return importModule(CharStreams.fromPath(filePath), filePath, false)
     }
 
     fun importLibraryModule(name: String): Module? {
@@ -56,7 +55,7 @@ class ModuleImporter(private val program: Program,
     }
 
     private fun importModule(stream: CharStream, modulePath: Path, isLibrary: Boolean): Module {
-        val parser = Prog8Parser()
+        val parser = Prog8Parser
         val sourceText = stream.toString()
         val moduleAst = parser.parseModule(sourceText)
 

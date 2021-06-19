@@ -1,59 +1,13 @@
 package prog8tests
 
-import org.antlr.v4.runtime.*
-import org.antlr.v4.runtime.misc.ParseCancellationException
 import org.junit.jupiter.api.Test
-import prog8.ast.IBuiltinFunctions
-import prog8.ast.IMemSizer
-import prog8.ast.IStringEncoding
-import prog8.ast.Program
-import prog8.ast.Module
-import prog8.ast.antlr.toAst
-import prog8.ast.base.DataType
-import prog8.ast.base.Position
-import prog8.ast.expressions.Expression
-import prog8.ast.expressions.InferredTypes
-import prog8.ast.expressions.NumericLiteralValue
 import prog8.ast.statements.Block
-import prog8.parser.*
+import prog8.parser.ParseError
+import prog8.parser.Prog8Parser.parseModule
 import java.nio.file.Path
 import kotlin.test.*
-import prog8.parser.Prog8Parser
 
 class TestProg8Parser {
-
-    private fun parseModule(srcText: String): Module {
-        return Prog8Parser().parseModule(srcText)
-    }
-
-    private fun parseModule(srcFile: Path): Module {
-        return parseModule(CharStreams.fromPath(srcFile))
-    }
-
-    private fun parseModule(srcStream: CharStream): Module {
-        return parseModule(srcStream.toString())
-    }
-
-    object DummyEncoding: IStringEncoding {
-        override fun encodeString(str: String, altEncoding: Boolean): List<Short> {
-            TODO("Not yet implemented")
-        }
-
-        override fun decodeString(bytes: List<Short>, altEncoding: Boolean): String {
-            TODO("Not yet implemented")
-        }
-    }
-
-    object DummyFunctions: IBuiltinFunctions {
-        override val names: Set<String> = emptySet()
-        override val purefunctionNames: Set<String> = emptySet()
-        override fun constValue(name: String, args: List<Expression>, position: Position, memsizer: IMemSizer): NumericLiteralValue? = null
-        override fun returnType(name: String, args: MutableList<Expression>) = InferredTypes.InferredType.unknown()
-    }
-
-    object DummyMemsizer: IMemSizer {
-        override fun memorySize(dt: DataType): Int = 0
-    }
 
     @Test
     fun testModuleSourceNeedNotEndWithNewline() {
@@ -62,7 +16,7 @@ class TestProg8Parser {
 
         // #45: Prog8ANTLRParser would report (throw) "missing <EOL> at '<EOF>'"
         val module = parseModule(srcText)
-        assertEquals(module.statements.size, 1)
+        assertEquals(1, module.statements.size)
     }
 
     @Test
@@ -70,7 +24,7 @@ class TestProg8Parser {
         val nl = "\n" // say, Unix-style (different flavours tested elsewhere)
         val srcText = "foo {" + nl + "}" + nl  // source does end with a newline (issue #40)
         val module = parseModule(srcText)
-        assertEquals(module.statements.size, 1)
+        assertEquals(1, module.statements.size)
     }
 
     @Test
@@ -83,9 +37,9 @@ class TestProg8Parser {
         // GOOD: 2nd block `bar` does start on a new line; however, a nl at the very end ain't needed
         val srcGood = "foo {" + nl + "}" + nl + "bar {" + nl + "}"
 
-        assertFailsWith<ParsingFailedError> { parseModule(srcBad) }
+        assertFailsWith<ParseError> { parseModule(srcBad) }
         val module = parseModule(srcGood)
-        assertEquals(module.statements.size, 2)
+        assertEquals(2, module.statements.size)
     }
 
     @Test
@@ -113,7 +67,7 @@ class TestProg8Parser {
             nlUnix      // end with newline (see testModuleSourceNeedNotEndWithNewline)
 
         val module = parseModule(srcText)
-        assertEquals(module.statements.size, 2)
+        assertEquals(2, module.statements.size)
     }
 
     @Test
@@ -128,7 +82,7 @@ class TestProg8Parser {
             }
 """
         val module = parseModule(srcText)
-        assertEquals(module.statements.size, 1)
+        assertEquals(1, module.statements.size)
     }
 
     @Test
@@ -145,7 +99,7 @@ class TestProg8Parser {
             }
 """
         val module = parseModule(srcText)
-        assertEquals(module.statements.size, 2)
+        assertEquals(2, module.statements.size)
     }
 
     @Test
@@ -160,7 +114,7 @@ class TestProg8Parser {
             
 """
         val module = parseModule(srcText)
-        assertEquals(module.statements.size, 1)
+        assertEquals(1, module.statements.size)
     }
 
     @Test
@@ -168,14 +122,14 @@ class TestProg8Parser {
         // issue: #47
 
         // block and block
-        assertFailsWith<ParsingFailedError>{ parseModule("""
+        assertFailsWith<ParseError>{ parseModule("""
             blockA {
             } blockB {            
             }            
         """) }
 
         // block and directive
-        assertFailsWith<ParsingFailedError>{ parseModule("""
+        assertFailsWith<ParseError>{ parseModule("""
             blockB {            
             } %import textio            
         """) }
@@ -184,25 +138,47 @@ class TestProg8Parser {
         // Leaving them in anyways.
 
         // dir and block
-        assertFailsWith<ParsingFailedError>{ parseModule("""
+        assertFailsWith<ParseError>{ parseModule("""
             %import textio blockB {            
             }            
         """) }
 
-        assertFailsWith<ParsingFailedError>{ parseModule("""
+        assertFailsWith<ParseError>{ parseModule("""
             %import textio %import syslib            
         """) }
     }
 
-    /*
     @Test
-    fun testImportLibraryModule() {
-        val program = Program("foo", mutableListOf(), DummyFunctions, DummyMemsizer)
-        val importer = ModuleImporter(program, DummyEncoding, "blah", listOf("./test/fixtures"))
+    fun testErrorLocationForSourceFromString() {
+        val srcText = "bad * { }\n"
 
-        //assertFailsWith<ParsingFailedError>(){ importer.importLibraryModule("import_file_with_syntax_error") }
+        assertFailsWith<ParseError> { parseModule(srcText) }
+        try {
+            parseModule(srcText)
+        } catch (e: ParseError) {
+            // Note: assertContains expects *actual* value first
+            assertContains(e.position.file, Regex("^<String@[0-9a-f]+>$"))
+            assertEquals(1, e.position.line, "line; should be 1-based")
+            assertEquals(4, e.position.startCol, "startCol; should be 0-based" )
+            assertEquals(4, e.position.endCol, "endCol; should be 0-based")
+        }
     }
-    */
+
+    @Test
+    fun testErrorLocationForSourceFromPath() {
+        val filename = "file_with_syntax_error.p8"
+        val path = Path.of("test", "fixtures", filename)
+
+        assertFailsWith<ParseError> { parseModule(path) }
+        try {
+            parseModule(path)
+        } catch (e: ParseError) {
+            assertEquals(filename, e.position.file, "provenance; should be the path's filename, incl. extension '.p8'")
+            assertEquals(2, e.position.line, "line; should be 1-based")
+            assertEquals(6, e.position.startCol, "startCol; should be 0-based" )
+            assertEquals(6, e.position.endCol, "endCol; should be 0-based")
+        }
+    }
 
     @Test
     fun testProg8Ast() {
@@ -214,6 +190,6 @@ main {
 }
 """)
         assertIs<Block>(module.statements.first())
-        assertEquals((module.statements.first() as Block).name, "main")
+        assertEquals("main", (module.statements.first() as Block).name)
     }
 }
