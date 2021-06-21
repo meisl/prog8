@@ -5,7 +5,7 @@ import prog8.ast.IStringEncoding
 import prog8.ast.Module
 import prog8.ast.antlr.toAst
 import prog8.ast.base.Position
-import java.nio.file.Path
+import kotlin.io.path.Path
 
 
 open class ParsingFailedError(override var message: String) : Exception(message)
@@ -42,7 +42,7 @@ object Prog8Parser {
         val parseTree = parser.module()
 
         // TODO: use Module ctor directly
-        val moduleAst = parseTree.toAst("anonymous", false, pathFrom(""), DummyEncoding)
+        val moduleAst = parseTree.toAst("anonymous", false, Path(""), DummyEncoding)
 
         return moduleAst
     }

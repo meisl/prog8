@@ -1,6 +1,5 @@
 package prog8.parser
 
-import org.antlr.v4.runtime.*
 import prog8.ast.IStringEncoding
 import prog8.ast.Module
 import prog8.ast.Program
@@ -11,14 +10,11 @@ import prog8.ast.statements.DirectiveArg
 import java.io.File
 import kotlin.io.FileSystemException
 import java.net.URL
-import java.nio.file.FileSystems
 import java.nio.file.Path   // TODO: use kotlin.io.paths.Path instead
 import java.nio.file.Paths  // TODO: use kotlin.io.paths.Path instead
 
 
 fun moduleName(fileName: Path) = fileName.toString().substringBeforeLast('.')
-
-internal fun pathFrom(stringPath: String, vararg rest: String): Path  = FileSystems.getDefault().getPath(stringPath, *rest)
 
 
 class ModuleImporter(private val program: Program,
@@ -51,7 +47,7 @@ class ModuleImporter(private val program: Program,
         lines.asSequence()
             .mapIndexed { i, it -> i to it }
             .filter { (it.second as? Directive)?.directive == "%import" }
-            .forEach { executeImportDirective(it.second as Directive, filePath) }
+            .forEach { executeImportDirective(it.second as Directive, module) }
 
         module.statements = lines
         return module
@@ -61,13 +57,12 @@ class ModuleImporter(private val program: Program,
         val import = Directive("%import", listOf(
                 DirectiveArg("", name, 42, position = Position("<<<implicit-import>>>", 0, 0, 0))
         ), Position("<<<implicit-import>>>", 0, 0, 0))
-        return executeImportDirective(import, Paths.get(""))
+        return executeImportDirective(import, null)
     }
 
-    private fun importModule(stream: CharStream, modulePath: Path, isLibrary: Boolean): Module {
-        val parser = Prog8Parser
-        val sourceText = stream.toString()
-        val moduleAst = parser.parseModule(SourceCode.of(sourceText))
+    //private fun importModule(stream: CharStream, modulePath: Path, isLibrary: Boolean): Module {
+    private fun importModule(src: SourceCode, isLibrary: Boolean) : Module {
+        val moduleAst = Prog8Parser.parseModule(src)
 
         //moduleAst.isLibraryModule = isLibrary
         //moduleAst.source = modulePath
@@ -81,13 +76,13 @@ class ModuleImporter(private val program: Program,
         lines.asSequence()
                 .mapIndexed { i, it -> i to it }
                 .filter { (it.second as? Directive)?.directive == "%import" }
-                .forEach { executeImportDirective(it.second as Directive, modulePath) }
+                .forEach { executeImportDirective(it.second as Directive, moduleAst) }
 
         moduleAst.statements = lines
         return moduleAst
     }
 
-    private fun executeImportDirective(import: Directive, importingModule: Path): Module? {
+    private fun executeImportDirective(import: Directive, importingModule: Module?): Module? {
         if(import.directive!="%import" || import.args.size!=1 || import.args[0].name==null)
             throw SyntaxError("invalid import directive", import.position)
         val moduleName = import.args[0].name!!
@@ -96,19 +91,18 @@ class ModuleImporter(private val program: Program,
 
         val existing = program.modules.singleOrNull { it.name == moduleName }
         if(existing!=null)
-            return null
+            return null // TODO: why return null instead of Module instance?
 
         var srcCode = tryGetModuleFromResource("$moduleName.p8", compilationTargetName)
         val importedModule =
             if (srcCode != null) {
                 println("importing '$moduleName' (library): ${srcCode.origin}")
-                val path = Path.of(URL(srcCode.origin).file) // FIXME: doesn't work with our made-up protocoll "res:"
-                importModule(srcCode.getCharStream(), path, true)
+                importModule(srcCode, true)
             } else {
                 srcCode = tryGetModuleFromFile(moduleName, importingModule)
                 if (srcCode == null)
                     throw NoSuchFileException(File("$moduleName.p8"))
-                importModule(srcCode.getCharStream(), kotlin.io.path.Path(srcCode.origin), false)
+                importModule(srcCode, false)
             }
 
         removeDirectivesFromImportedModule(importedModule)
@@ -137,21 +131,17 @@ class ModuleImporter(private val program: Program,
         return null
     }
 
-    private fun tryGetModuleFromFile(name: String, importingModule: Path): SourceCode? {
+    private fun tryGetModuleFromFile(name: String, importingModule: Module?): SourceCode? {
         val fileName = "$name.p8"
         val libpaths = libdirs.map { Path.of(it) }
         val locations =
-            if (importingModule.toString().isEmpty()) { // <=> imported from library module
+            if (importingModule == null) { // <=> imported from library module
                 libpaths
             } else {
-                libpaths.drop(1) +  // TODO: why drop the first?!
-                listOf(importingModule.parent ?: Path.of(".")) +
-                listOf( // also look in ./prog8lib
-                    Paths.get(
-                        Paths.get("").toAbsolutePath().toString(),
-                        "prog8lib"
-                    )
-                )
+                libpaths.drop(1) +  // TODO: why drop the first?
+                // FIXME: won't work until Prog8Parser is fixed s.t. it fully initialzes the modules it returns
+                listOf(Path.of(importingModule.position.file).parent ?: Path.of(".")) +
+                listOf(Path.of(".", "prog8lib"))
             }
 
         locations.forEach {
