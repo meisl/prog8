@@ -763,6 +763,16 @@ internal class AstChecker(private val program: Program,
         super.visit(array)
     }
 
+    override fun visit(ch: CharLiteral) {
+        try {
+            compTarget.encodeString(ch.value.toString(), ch.altEncoding)
+        } catch (cx: CharConversionException) {
+            errors.err(cx.message ?: "can't encode character", ch.position)
+        }
+
+        super.visit(ch)
+    }
+
     override fun visit(string: StringLiteralValue) {
         checkValueTypeAndRangeString(DataType.STR, string)
 
