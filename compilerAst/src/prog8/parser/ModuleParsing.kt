@@ -8,10 +8,10 @@ import prog8.ast.base.Position
 import prog8.ast.base.SyntaxError
 import prog8.ast.statements.Directive
 import prog8.ast.statements.DirectiveArg
+import java.io.File
 import kotlin.io.FileSystemException
 import java.net.URL
 import java.nio.file.FileSystems
-import java.nio.file.Files
 import java.nio.file.Path   // TODO: use kotlin.io.paths.Path instead
 import java.nio.file.Paths  // TODO: use kotlin.io.paths.Path instead
 
@@ -28,7 +28,7 @@ class ModuleImporter(private val program: Program,
 
     fun importModule(filePath: Path): Module {
         print("importing '${moduleName(filePath.fileName)}'")
-        if(filePath.parent!=null) {
+        if (filePath.parent != null) { // TODO: use Path.relativize
             var importloc = filePath.toString()
             val curdir = Paths.get("").toAbsolutePath().toString()
             if(importloc.startsWith(curdir))
@@ -87,7 +87,7 @@ class ModuleImporter(private val program: Program,
         return moduleAst
     }
 
-    private fun executeImportDirective(import: Directive, source: Path): Module? {
+    private fun executeImportDirective(import: Directive, importingModule: Path): Module? {
         if(import.directive!="%import" || import.args.size!=1 || import.args[0].name==null)
             throw SyntaxError("invalid import directive", import.position)
         val moduleName = import.args[0].name!!
@@ -98,16 +98,17 @@ class ModuleImporter(private val program: Program,
         if(existing!=null)
             return null
 
-        val srcCode = tryGetModuleFromResource("$moduleName.p8", compilationTargetName)
+        var srcCode = tryGetModuleFromResource("$moduleName.p8", compilationTargetName)
         val importedModule =
-            if (srcCode != null) { // found in resources
-                // load the module from the embedded resource
+            if (srcCode != null) {
                 println("importing '$moduleName' (library): ${srcCode.origin}")
-                val path = Path.of(URL(srcCode.origin).file)
+                val path = Path.of(URL(srcCode.origin).file) // FIXME: doesn't work with our made-up protocoll "res:"
                 importModule(srcCode.getCharStream(), path, true)
             } else {
-                val modulePath = tryGetModuleFromFile(moduleName, source, import.position)
-                importModule(modulePath)
+                srcCode = tryGetModuleFromFile(moduleName, importingModule)
+                if (srcCode == null)
+                    throw NoSuchFileException(File("$moduleName.p8"))
+                importModule(srcCode.getCharStream(), kotlin.io.path.Path(srcCode.origin), false)
             }
 
         removeDirectivesFromImportedModule(importedModule)
@@ -136,18 +137,31 @@ class ModuleImporter(private val program: Program,
         return null
     }
 
-    private fun tryGetModuleFromFile(name: String, source: Path, position: Position?): Path {
+    private fun tryGetModuleFromFile(name: String, importingModule: Path): SourceCode? {
         val fileName = "$name.p8"
-        val libpaths = libdirs.map {Path.of(it)}
+        val libpaths = libdirs.map { Path.of(it) }
         val locations =
-            (if(source.toString().isEmpty()) libpaths else libpaths.drop(1) + listOf(source.parent ?: Path.of("."))) +
-                listOf(Paths.get(Paths.get("").toAbsolutePath().toString(), "prog8lib"))
+            if (importingModule.toString().isEmpty()) { // <=> imported from library module
+                libpaths
+            } else {
+                libpaths.drop(1) +  // TODO: why drop the first?!
+                listOf(importingModule.parent ?: Path.of(".")) +
+                listOf( // also look in ./prog8lib
+                    Paths.get(
+                        Paths.get("").toAbsolutePath().toString(),
+                        "prog8lib"
+                    )
+                )
+            }
 
         locations.forEach {
-            val file = pathFrom(it.toString(), fileName)
-            if (Files.isReadable(file)) return file
+            try {
+                return SourceCode.fromPath(it.resolve(fileName))
+            } catch (e: NoSuchFileException) {
+            }
         }
 
-        throw ParsingFailedError("$position Import: no module source file '$fileName' found  (I've looked in: embedded libs and $locations)")
+        //throw ParsingFailedError("$position Import: no module source file '$fileName' found  (I've looked in: embedded libs and $locations)")
+        return null
     }
 }
