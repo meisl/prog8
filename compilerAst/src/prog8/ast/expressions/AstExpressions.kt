@@ -500,8 +500,8 @@ class NumericLiteralValue(val type: DataType,    // only numerical types allowed
 }
 
 class CharLiteral(val value: Char,
-                 val altEncoding: Boolean,          // such as: screencodes instead of Petscii for the C64
-                 override val position: Position) : Expression() {
+                  val altEncoding: Boolean,          // such as: screencodes instead of Petscii for the C64
+                  override val position: Position) : Expression() {
     override lateinit var parent: Node
 
     override fun linkParents(parent: Node) {

@@ -261,8 +261,8 @@ class AstToSourceCode(val output: (text: String) -> Unit, val program: Program):
         output(numLiteral.number.toString())
     }
 
-    override fun visit(ch: CharLiteral) {
-        output("'${escape(ch.value.toString())}'")
+    override fun visit(char: CharLiteral) {
+        output("'${escape(char.value.toString())}'")
     }
 
     override fun visit(string: StringLiteralValue) {

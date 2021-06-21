@@ -763,14 +763,14 @@ internal class AstChecker(private val program: Program,
         super.visit(array)
     }
 
-    override fun visit(ch: CharLiteral) {
+    override fun visit(char: CharLiteral) {
         try {
-            compTarget.encodeString(ch.value.toString(), ch.altEncoding)
-        } catch (cx: CharConversionException) {
-            errors.err(cx.message ?: "can't encode character", ch.position)
+            compTarget.encodeString(char.value.toString(), char.altEncoding)
+        } catch (e: CharConversionException) {
+            errors.err(e.message ?: "can't encode character", char.position)
         }
 
-        super.visit(ch)
+        super.visit(char)
     }
 
     override fun visit(string: StringLiteralValue) {
