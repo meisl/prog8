@@ -14,7 +14,7 @@ import prog8.compiler.target.cpu6502.codegen.assignment.AsmAssignment
 import prog8.compiler.target.cpu6502.codegen.assignment.AssignmentAsmGen
 import prog8.optimizer.CallGraph
 import java.nio.file.Path
-import java.nio.file.Paths
+import kotlin.io.path.*
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.*
@@ -398,6 +398,7 @@ internal class AsmGen(private val program: Program,
         }
     }
 
+    // TODO: do the actual string encoding here, in AsmGen
     private fun outputStringvar(strdecl: VarDecl, bytes: List<Short>) {
         val sv = strdecl.value as StringLiteralValue
         val altEncoding = if(sv.altEncoding) "@" else ""
@@ -1318,7 +1319,7 @@ $repeatLabel    lda  $counterVar
                 val offset = if(stmt.args.size>1) ", ${stmt.args[1].int}" else ""
                 val length = if(stmt.args.size>2) ", ${stmt.args[2].int}" else ""
                 val includedSourcePath = stmt.definingModule().source.resolveSibling(stmt.args[0].str)
-                val relPath = Paths.get("").relativize(includedSourcePath)
+                val relPath = Path("").relativize(includedSourcePath)
                 out("  .binary \"$relPath\" $offset $length")
             }
             "%breakpoint" -> {

@@ -2,8 +2,8 @@ package prog8tests
 
 import org.junit.jupiter.api.Test
 import kotlin.test.*
-import java.nio.file.Path   // TODO: use kotlin.io.path.Path instead
 import kotlin.io.path.*
+
 import prog8.ast.statements.Block
 import prog8.parser.ParseError
 import prog8.parser.Prog8Parser.parseModule
@@ -154,8 +154,8 @@ class TestProg8Parser {
     @Test
     fun parseModuleShouldNotLookAtImports() {
         val imported = "i_do_not_exist"
-        val pathNoExt = Path.of(imported).absolute()
-        val pathWithExt = Path.of("${pathNoExt}.p8")
+        val pathNoExt = Path(imported).absolute()
+        val pathWithExt = Path("${pathNoExt}.p8")
         val text = "%import $imported"
 
         assertFalse(pathNoExt.exists(), "sanity check: file should not exist: $pathNoExt")
@@ -184,7 +184,7 @@ class TestProg8Parser {
     @Test
     fun testErrorLocationForSourceFromPath() {
         val filename = "file_with_syntax_error.p8"
-        val path = Path.of("test", "fixtures", filename)
+        val path = Path("test", "fixtures", filename)
 
         assertFailsWith<ParseError> { parseModule(SourceCode.fromPath(path)) }
         try {

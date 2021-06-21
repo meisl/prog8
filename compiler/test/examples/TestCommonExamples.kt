@@ -2,10 +2,11 @@ package prog8tests
 
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
-import prog8.compiler.compileProgram
-import prog8.compiler.target.Cx16Target
 import kotlin.test.*
 import kotlin.io.path.*
+
+import prog8.compiler.target.Cx16Target
+import prog8.compiler.compileProgram
 
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)

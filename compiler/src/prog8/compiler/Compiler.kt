@@ -18,10 +18,10 @@ import prog8.compiler.target.asmGeneratorFor
 import prog8.optimizer.*
 import prog8.parser.ModuleImporter
 import prog8.parser.ParsingFailedError
-import prog8.parser.moduleName
 import java.io.File
 import java.io.InputStream
 import java.nio.file.Path
+import kotlin.io.path.*
 import kotlin.system.exitProcess
 import kotlin.system.measureTimeMillis
 
@@ -173,7 +173,7 @@ private fun parseImports(filepath: Path,
     val compilationTargetName = compTarget.name
     println("Compiler target: $compilationTargetName. Parsing...")
     val bf = BuiltinFunctionsFacade(BuiltinFunctions)
-    val programAst = Program(moduleName(filepath.fileName), mutableListOf(), bf, compTarget)
+    val programAst = Program(filepath.nameWithoutExtension, mutableListOf(), bf, compTarget)
     bf.program = programAst
 
     val importer = ModuleImporter(programAst, compTarget, compilationTargetName, libdirs)
@@ -359,6 +359,9 @@ fun loadAsmIncludeFile(filename: String, source: Path): String {
     }
 }
 
+/**
+ * TODO: remove tryGetEmbeddedResource - duplicated in ModuleImporter + possibly elsewhere
+ */
 internal fun tryGetEmbeddedResource(name: String): InputStream? {
     return object{}.javaClass.getResourceAsStream("/prog8lib/$name")
 }

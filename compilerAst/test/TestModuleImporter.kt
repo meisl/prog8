@@ -3,7 +3,6 @@ package prog8tests
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import kotlin.test.*
-import java.nio.file.Path   // TODO: use kotlin.io.path.Path instead
 import kotlin.io.path.*
 
 import prog8.ast.IBuiltinFunctions
@@ -49,7 +48,7 @@ class TestModuleImporter {
         val program = Program("foo", mutableListOf(), DummyFunctions, DummyMemsizer)
         val importer = ModuleImporter(program, DummyEncoding, "blah", listOf("./test/fixtures"))
 
-        val srcPath = Path.of("test", "fixtures", "i_do_not_exist")
+        val srcPath = Path("test", "fixtures", "i_do_not_exist")
 
         assertFalse(srcPath.exists(), "sanity check: file should not exist")
         assertFailsWith<NoSuchFileException> { importer.importModule(srcPath) }
@@ -60,7 +59,7 @@ class TestModuleImporter {
         val program = Program("foo", mutableListOf(), DummyFunctions, DummyMemsizer)
         val importer = ModuleImporter(program, DummyEncoding, "blah", listOf("./test/fixtures"))
 
-        val srcPath = Path.of("test", "fixtures")
+        val srcPath = Path("test", "fixtures")
 
         assertTrue(srcPath.isDirectory(), "sanity check: should be a directory")
 
@@ -76,7 +75,7 @@ class TestModuleImporter {
         val importer = ModuleImporter(program, DummyEncoding, "blah", listOf("./test/fixtures"))
 
         val filename = "file_with_syntax_error.p8"
-        val path = Path.of("test", "fixtures", filename)
+        val path = Path("test", "fixtures", filename)
         val act = { importer.importModule(path) }
 
         assertFailsWith<ParseError> { act() }
@@ -95,8 +94,8 @@ class TestModuleImporter {
         val program = Program("foo", mutableListOf(), DummyFunctions, DummyMemsizer)
         val importer = ModuleImporter(program, DummyEncoding, "blah", listOf("./test/fixtures"))
 
-        val importing = Path.of("test", "fixtures", "import_file_with_syntax_error.p8")
-        val imported = Path.of("test", "fixtures", "file_with_syntax_error.p8")
+        val importing = Path("test", "fixtures", "import_file_with_syntax_error.p8")
+        val imported = Path("test", "fixtures", "file_with_syntax_error.p8")
 
         val act = { importer.importModule(importing) }
 
@@ -119,8 +118,8 @@ class TestModuleImporter {
         val importer = ModuleImporter(program, DummyEncoding, "blah", listOf("./test/fixtures"))
         val filenameNoExt = "i_do_not_exist"
         val filenameWithExt = filenameNoExt + ".p8"
-        val srcPathNoExt = Path.of("test", "fixtures", filenameNoExt)
-        val srcPathWithExt = Path.of("test", "fixtures", filenameWithExt)
+        val srcPathNoExt = Path("test", "fixtures", filenameNoExt)
+        val srcPathWithExt = Path("test", "fixtures", filenameWithExt)
 
         assertFalse(srcPathNoExt.exists(), "sanity check: file should not exist")
         assertFalse(srcPathWithExt.exists(), "sanity check: file should not exist")
@@ -141,7 +140,7 @@ class TestModuleImporter {
         try {
             act()
         } catch (e: ParseError) {
-            val expectedProvenance = Path.of("test", "fixtures", filename + ".p8")
+            val expectedProvenance = Path("test", "fixtures", filename + ".p8")
                 .absolutePathString()
             assertEquals(expectedProvenance, e.position.file)
             assertEquals(2, e.position.line, "line; should be 1-based")
@@ -164,7 +163,7 @@ class TestModuleImporter {
         try {
             act()
         } catch (e: ParseError) {
-            val expectedProvenance = Path.of(libdirs[0], imported + ".p8")
+            val expectedProvenance = Path(libdirs[0], imported + ".p8")
                 .normalize()
                 .absolutePathString()
             assertEquals(expectedProvenance, e.position.file)

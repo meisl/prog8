@@ -3,6 +3,9 @@ package prog8.ast.antlr
 import prog8.ast.base.Position
 import prog8.ast.base.SyntaxError
 
+/**
+  * TODO: move utility functions escape(String) and unescape(String) OUT OF prog8.ast.antlr!
+  */
 fun escape(str: String): String {
     val es = str.map {
         when(it) {
@@ -18,6 +21,9 @@ fun escape(str: String): String {
     return es.joinToString("")
 }
 
+/**
+ * TODO: move utility functions escape(String) and unescape(String) OUT OF prog8.ast.antlr!
+ */
 fun unescape(str: String, position: Position): String {
     val result = mutableListOf<Char>()
     val iter = str.iterator()

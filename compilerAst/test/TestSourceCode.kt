@@ -3,7 +3,6 @@ package prog8tests
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import kotlin.test.*
-import java.nio.file.Path   // TODO: use kotlin.io.path.Path instead
 import kotlin.io.path.*
 
 import prog8.parser.SourceCode
@@ -27,7 +26,7 @@ class TestSourceCode {
     @Test
     fun testFromPathWithNonExistingPath() {
         val filename = "i_do_not_exist.p8"
-        val path = Path.of("test", "fixtures", filename)
+        val path = Path("test", "fixtures", filename)
 
         assertFalse(path.exists(), "sanity check: file should not exist: ${path.absolute()}")
         assertFailsWith<NoSuchFileException> { SourceCode.fromPath(path) }
@@ -35,8 +34,8 @@ class TestSourceCode {
 
     @Test
     fun testFromPathWithMissingExtension_p8() {
-        val pathWithoutExt = Path.of("test", "fixtures", "simple_main")
-        val pathWithExt = Path.of(pathWithoutExt.toString() + ".p8")
+        val pathWithoutExt = Path("test", "fixtures", "simple_main")
+        val pathWithExt = Path(pathWithoutExt.toString() + ".p8")
 
         assertTrue(pathWithExt.isRegularFile(), "sanity check: should be normal file: ${pathWithExt.absolute()}")
         assertTrue(pathWithExt.isReadable(), "sanity check: should be readable: ${pathWithExt.absolute()}")
@@ -45,7 +44,7 @@ class TestSourceCode {
 
     @Test
     fun testFromPathWithDirectory() {
-        val path = Path.of("test", "fixtures")
+        val path = Path("test", "fixtures")
 
         assertTrue(path.isDirectory(), "sanity check: should be a directory")
         assertFailsWith<AccessDeniedException> { SourceCode.fromPath(path) }
@@ -54,7 +53,7 @@ class TestSourceCode {
     @Test
     fun testFromPathWithExistingPath() {
         val filename = "simple_main.p8"
-        val path = Path.of("test", "fixtures", filename)
+        val path = Path("test", "fixtures", filename)
         val src = SourceCode.fromPath(path)
 
         val expectedOrigin = path.normalize().absolutePathString()
@@ -68,7 +67,7 @@ class TestSourceCode {
     @Test
     fun testFromPathWithExistingNonNormalizedPath() {
         val filename = "simple_main.p8"
-        val path = Path.of(".", "test", "..", "test", "fixtures", filename)
+        val path = Path(".", "test", "..", "test", "fixtures", filename)
         val src = SourceCode.fromPath(path)
 
         val expectedOrigin = path.normalize().absolutePathString()

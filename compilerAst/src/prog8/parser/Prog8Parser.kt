@@ -6,7 +6,7 @@ import prog8.ast.Module
 import prog8.ast.statements.Statement
 import prog8.ast.antlr.toAst
 import prog8.ast.base.Position
-import kotlin.io.path.Path
+import kotlin.io.path.*
 
 
 open class ParsingFailedError(override var message: String) : Exception(message)
@@ -43,14 +43,13 @@ object Prog8Parser {
         val parseTree = parser.module()
 
         // FIXME: hacking together a name for the module:
-        var moduleName = src.origin
-        if (moduleName.startsWith("<res:")) {
-            moduleName = Path(moduleName.substring(5, moduleName.length - 1))
-                .fileName.toString()
-        } else if (!moduleName.startsWith("<")) {
-            moduleName = Path(moduleName).fileName.toString()
+        val moduleName = when {
+            src.origin.startsWith("<") -> when {
+                src.origin.startsWith("<res:") -> Path(src.origin.substring(5, src.origin.length - 1)).nameWithoutExtension
+                else -> src.origin
+            }
+            else -> Path(src.origin).nameWithoutExtension
         }
-        moduleName = moduleName.substringBeforeLast('.')
 
         val module = parseTree.toAst(moduleName, false, source = Path(""), DummyEncoding)
 

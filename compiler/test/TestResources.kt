@@ -3,7 +3,7 @@ package prog8tests
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import kotlin.test.*
-import java.nio.file.Path   // TODO: use kotlin.io.path.Path instead
+import kotlin.io.path.*
 
 import prog8.parser.SourceCode
 
@@ -32,7 +32,7 @@ class TestResources {
         val src = SourceCode.fromResources(full)
 
         // FIXME: hack to get at compiler/res/..
-        val expectedText = Path.of("../compiler/res/prog8lib/$filename").toFile().readText();
+        val expectedText = Path("..", "compiler", "res", "prog8lib", filename).toFile().readText();
         val actualText = src.asString()
 
         assertEquals("<res:$full>", src.origin, )
