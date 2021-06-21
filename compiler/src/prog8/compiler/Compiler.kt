@@ -182,8 +182,10 @@ private fun parseImports(filepath: Path,
 
     val importedFiles = programAst.modules.filter { !it.source.startsWith("@embedded@") }.map { it.source }
     val compilerOptions = determineCompilationOptions(programAst, compTarget)
-    if (compilerOptions.launcher == LauncherType.BASIC && compilerOptions.output != OutputType.PRG)
+    if (compilerOptions.launcher == LauncherType.BASIC && compilerOptions.output != OutputType.PRG) {
+        // TODO: contradictory/incompatible compiler options are NOT a failure of parsing!
         throw ParsingFailedError("${programAst.modules.first().position} BASIC launcher requires output type PRG.")
+     }
 
     // depending on the machine and compiler options we may have to include some libraries
     for(lib in compTarget.machine.importLibs(compilerOptions, compilationTargetName))
