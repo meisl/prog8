@@ -89,9 +89,11 @@ class ModuleImporter(private val program: Program,
         if("$moduleName.p8" == import.position.file)
             throw SyntaxError("cannot import self", import.position)
 
-        val existing = program.modules.singleOrNull { it.name == moduleName }
+
+        // TODO: this kind of "import resolution" is too simplistic!
+        val existing = program.modules .find { it.name == moduleName }
         if(existing!=null)
-            return null // TODO: why return null instead of Module instance?
+            return null
 
         var srcCode = tryGetModuleFromResource("$moduleName.p8", compilationTargetName)
         val importedModule =
