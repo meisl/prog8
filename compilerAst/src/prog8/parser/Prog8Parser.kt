@@ -3,6 +3,7 @@ package prog8.parser
 import org.antlr.v4.runtime.*
 import prog8.ast.IStringEncoding
 import prog8.ast.Module
+import prog8.ast.statements.Statement
 import prog8.ast.antlr.toAst
 import prog8.ast.base.Position
 import kotlin.io.path.Path
@@ -41,10 +42,22 @@ object Prog8Parser {
 
         val parseTree = parser.module()
 
-        // TODO: use Module ctor directly
-        val moduleAst = parseTree.toAst("anonymous", false, Path(""), DummyEncoding)
+        // FIXME: hacking together a name for the module:
+        var moduleName = src.origin
+        if (moduleName.startsWith("<res:")) {
+            moduleName = Path(moduleName.substring(5, moduleName.length - 1))
+                .fileName.toString()
+        } else if (!moduleName.startsWith("<")) {
+            moduleName = Path(moduleName).fileName.toString()
+        }
+        moduleName = moduleName.substringBeforeLast('.')
 
-        return moduleAst
+        val module = parseTree.toAst(moduleName, false, source = Path(""), DummyEncoding)
+
+        // TODO: use Module ctor directly
+        // val module = Module(moduleName, statements = listOf<Statement>().toMutableList(), position = null, isLibraryModule = false, source = null)
+
+        return module
     }
 
     private object Prog8ErrorStrategy: BailErrorStrategy() {
