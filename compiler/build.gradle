@@ -72,6 +72,9 @@ sourceSets {
         java {
             srcDirs = ["${project.projectDir}/test"]
         }
+	resources {
+            srcDirs = ["${project.projectDir}/res"]
+        }
     }
 }
 
