@@ -139,6 +139,9 @@ internal class AstIdentifiersChecker(private val program: Program, private val e
         super.visit(label)
     }
 
+    /**
+     * TODO: shouldn't that really be checked by AstChecker?
+     */
     override fun visit(string: StringLiteralValue) {
         if (string.value.length > 255)
             errors.err("string literal length max is 255", string.position)
