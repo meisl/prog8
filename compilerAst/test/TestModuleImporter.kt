@@ -7,7 +7,6 @@ import kotlin.io.path.*
 
 import prog8.ast.IBuiltinFunctions
 import prog8.ast.IMemSizer
-import prog8.ast.IStringEncoding
 import prog8.ast.Program
 import prog8.ast.base.DataType
 import prog8.ast.base.Position
@@ -20,16 +19,6 @@ import prog8.parser.ParseError
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class TestModuleImporter {
-
-    object DummyEncoding: IStringEncoding {
-        override fun encodeString(str: String, altEncoding: Boolean): List<Short> {
-            TODO("Not yet implemented")
-        }
-
-        override fun decodeString(bytes: List<Short>, altEncoding: Boolean): String {
-            TODO("Not yet implemented")
-        }
-    }
 
     object DummyFunctions: IBuiltinFunctions {
         override val names: Set<String> = emptySet()
@@ -46,7 +35,7 @@ class TestModuleImporter {
     @Test
     fun testImportModuleWithNonExistingPath() {
         val program = Program("foo", mutableListOf(), DummyFunctions, DummyMemsizer)
-        val importer = ModuleImporter(program, DummyEncoding, "blah", listOf("./test/fixtures"))
+        val importer = ModuleImporter(program, "blah", listOf("./test/fixtures"))
 
         val srcPath = Path("test", "fixtures", "i_do_not_exist")
 
@@ -57,7 +46,7 @@ class TestModuleImporter {
     @Test
     fun testImportModuleWithDirectoryPath() {
         val program = Program("foo", mutableListOf(), DummyFunctions, DummyMemsizer)
-        val importer = ModuleImporter(program, DummyEncoding, "blah", listOf("./test/fixtures"))
+        val importer = ModuleImporter(program, "blah", listOf("./test/fixtures"))
 
         val srcPath = Path("test", "fixtures")
 
@@ -72,7 +61,7 @@ class TestModuleImporter {
     @Test
     fun testImportModuleWithSyntaxError() {
         val program = Program("foo", mutableListOf(), DummyFunctions, DummyMemsizer)
-        val importer = ModuleImporter(program, DummyEncoding, "blah", listOf("./test/fixtures"))
+        val importer = ModuleImporter(program, "blah", listOf("./test/fixtures"))
 
         val filename = "file_with_syntax_error.p8"
         val path = Path("test", "fixtures", filename)
@@ -92,7 +81,7 @@ class TestModuleImporter {
     @Test
     fun testImportModuleWithImportingModuleWithSyntaxError() {
         val program = Program("foo", mutableListOf(), DummyFunctions, DummyMemsizer)
-        val importer = ModuleImporter(program, DummyEncoding, "blah", listOf("./test/fixtures"))
+        val importer = ModuleImporter(program, "blah", listOf("./test/fixtures"))
 
         val importing = Path("test", "fixtures", "import_file_with_syntax_error.p8")
         val imported = Path("test", "fixtures", "file_with_syntax_error.p8")
@@ -115,7 +104,7 @@ class TestModuleImporter {
     @Test
     fun testImportLibraryModuleWithNonExistingName() {
         val program = Program("foo", mutableListOf(), DummyFunctions, DummyMemsizer)
-        val importer = ModuleImporter(program, DummyEncoding, "blah", listOf("./test/fixtures"))
+        val importer = ModuleImporter(program, "blah", listOf("./test/fixtures"))
         val filenameNoExt = "i_do_not_exist"
         val filenameWithExt = filenameNoExt + ".p8"
         val srcPathNoExt = Path("test", "fixtures", filenameNoExt)
@@ -130,7 +119,7 @@ class TestModuleImporter {
     @Test
     fun testImportLibraryModuleWithSyntaxError() {
         val program = Program("foo", mutableListOf(), DummyFunctions, DummyMemsizer)
-        val importer = ModuleImporter(program, DummyEncoding, "blah", listOf("./test/fixtures"))
+        val importer = ModuleImporter(program, "blah", listOf("./test/fixtures"))
 
         val filename = "file_with_syntax_error"
 
@@ -153,7 +142,7 @@ class TestModuleImporter {
     fun testImportLibraryModuleWithImportingBadModule() {
         val program = Program("foo", mutableListOf(), DummyFunctions, DummyMemsizer)
         val libdirs = listOf("./test/fixtures")
-        val importer = ModuleImporter(program, DummyEncoding, "blah", libdirs)
+        val importer = ModuleImporter(program, "blah", libdirs)
 
         val importing = "import_file_with_syntax_error"
         val imported = "file_with_syntax_error"

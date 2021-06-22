@@ -170,13 +170,12 @@ private fun parseImports(filepath: Path,
                          errors: IErrorReporter,
                          compTarget: ICompilationTarget,
                          libdirs: List<String>): Triple<Program, CompilationOptions, List<Path>> {
-    val compilationTargetName = compTarget.name
-    println("Compiler target: $compilationTargetName. Parsing...")
+    println("Compiler target: ${compTarget.name}. Parsing...")
     val bf = BuiltinFunctionsFacade(BuiltinFunctions)
     val programAst = Program(filepath.nameWithoutExtension, mutableListOf(), bf, compTarget)
     bf.program = programAst
 
-    val importer = ModuleImporter(programAst, compTarget, compilationTargetName, libdirs)
+    val importer = ModuleImporter(programAst, compTarget.name, libdirs)
     importer.importModule(filepath)
     errors.report()
 
@@ -188,7 +187,7 @@ private fun parseImports(filepath: Path,
      }
 
     // depending on the machine and compiler options we may have to include some libraries
-    for(lib in compTarget.machine.importLibs(compilerOptions, compilationTargetName))
+    for(lib in compTarget.machine.importLibs(compilerOptions, compTarget.name))
         importer.importLibraryModule(lib)
 
     // always import prog8_lib and math

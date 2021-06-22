@@ -51,7 +51,7 @@ object Prog8Parser {
             else -> Path(src.origin).nameWithoutExtension
         }
 
-        val module = parseTree.toAst(moduleName, false, source = Path(""), DummyEncoding)
+        val module = parseTree.toAst(moduleName, false, source = Path(""))
 
         // TODO: use Module ctor directly
         // val module = Module(moduleName, statements = listOf<Statement>().toMutableList(), position = null, isLibraryModule = false, source = null)
@@ -82,16 +82,6 @@ object Prog8Parser {
             fillIn(e, recognizer!!.context)
             reportError(recognizer, e)
             throw e
-        }
-    }
-
-    private object DummyEncoding: IStringEncoding {
-        override fun encodeString(str: String, altEncoding: Boolean): List<Short> {
-            TODO("move StringEncoding out of compilerAst")
-        }
-
-        override fun decodeString(bytes: List<Short>, altEncoding: Boolean): String {
-            TODO("move StringEncoding out of compilerAst")
         }
     }
 

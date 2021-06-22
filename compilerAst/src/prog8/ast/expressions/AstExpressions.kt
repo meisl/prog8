@@ -667,7 +667,6 @@ class ArrayLiteralValue(val type: InferredTypes.InferredType,     // inferred be
 class RangeExpr(var from: Expression,
                 var to: Expression,
                 var step: Expression,
-                private val encoding: IStringEncoding,
                 override val position: Position) : Expression() {
     override lateinit var parent: Node
 
@@ -728,15 +727,16 @@ class RangeExpr(var from: Expression,
         return toConstantIntegerRange()?.count()
     }
 
+    /**
+     * TODO: range of constants: numeric + char
+     */
     fun toConstantIntegerRange(): IntProgression? {
         val fromVal: Int
         val toVal: Int
-        val fromString = from as? StringLiteralValue
-        val toString = to as? StringLiteralValue
-        if(fromString!=null && toString!=null ) {
-            // string range -> int range over character values
-            fromVal = encoding.encodeString(fromString.value, fromString.altEncoding)[0].toInt()
-            toVal = encoding.encodeString(toString.value, fromString.altEncoding)[0].toInt()
+        val fromChar = from as? CharLiteral // TODO: what if one is numeric and the other is char?
+        val toChar = to as? CharLiteral
+        if (fromChar !=null && toChar != null ) { // removed "string ranges" - they don't make sense
+            TODO("toConstantIntegerRange: turn CharLiteral s into numeric bounds")
         } else {
             val fromLv = from as? NumericLiteralValue
             val toLv = to as? NumericLiteralValue

@@ -1,6 +1,5 @@
 package prog8.parser
 
-import prog8.ast.IStringEncoding
 import prog8.ast.Module
 import prog8.ast.Program
 import prog8.ast.base.Position
@@ -14,7 +13,6 @@ import kotlin.io.path.*
 
 
 class ModuleImporter(private val program: Program,
-                     private val encoder: IStringEncoding,
                      private val compilationTargetName: String,
                      private val libdirs: List<String>) {
 
