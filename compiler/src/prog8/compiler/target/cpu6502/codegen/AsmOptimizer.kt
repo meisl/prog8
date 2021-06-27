@@ -3,7 +3,9 @@ package prog8.compiler.target.cpu6502.codegen
 
 // note: see https://wiki.nesdev.com/w/index.php/6502_assembly_optimisations
 
-
+/**
+ * TODO: OMG - DON'T optimize already generated assembly text!
+ */
 fun optimizeAssembly(lines: MutableList<String>): Int {
 
     var numberOfOptimizations = 0
