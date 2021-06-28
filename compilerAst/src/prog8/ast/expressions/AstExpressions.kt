@@ -520,7 +520,7 @@ class CharLiteral(val value: Char,
     override fun accept(walker: AstWalker, parent: Node) = walker.visit(this, parent) // TODO: why has *walker* .visit(..) methods?
 
     override fun toString(): String = "'${escape(value.toString())}'"
-    override fun inferType(program: Program): InferredTypes.InferredType = InferredTypes.knownFor(DataType.UNDEFINED) // FIXME: CharLiteral.inferType
+    override fun inferType(program: Program): InferredTypes.InferredType = InferredTypes.knownFor(DataType.CHAR) // FIXME: CharLiteral.inferType
     operator fun compareTo(other: CharLiteral): Int = value.compareTo(other.value)
     override fun hashCode(): Int = Objects.hash(value, altEncoding)
     override fun equals(other: Any?): Boolean {

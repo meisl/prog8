@@ -28,6 +28,7 @@ internal class ExpressionsAsmGen(private val program: Program, private val asmge
             is FunctionCall -> translateFunctionCallResultOntoStack(expression)
             is ArrayLiteralValue, is StringLiteralValue -> throw AssemblyError("no asm gen for string/array literal value assignment - should have been replaced by a variable")
             is RangeExpr -> throw AssemblyError("range expression should have been changed into array values")
+            else -> TODO("assembly code gen for " + expression.javaClass)
         }
     }
 

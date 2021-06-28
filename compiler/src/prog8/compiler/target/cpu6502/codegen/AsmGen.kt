@@ -25,7 +25,7 @@ internal class AsmGen(private val program: Program,
                       val errors: IErrorReporter,
                       val zeropage: Zeropage,
                       val options: CompilationOptions,
-                      private val compTarget: ICompilationTarget,
+                      internal val compTarget: ICompilationTarget,
                       private val outputDir: Path): IAssemblyGenerator {
 
     // for expressions and augmented assignments:
@@ -290,6 +290,13 @@ internal class AsmGen(private val program: Program,
             DataType.UWORD -> out("$name\t.word  0")
             DataType.WORD -> out("$name\t.sint  0")
             DataType.FLOAT -> out("$name\t.byte  0,0,0,0,0  ; float")
+            /*
+            DataType.CHAR -> {
+                val charLit = decl.value as CharLiteral
+                val numValue = compTarget.encodeString(charLit.value.toString(), charLit.altEncoding)[0]
+                out("$name\t.byte  $numValue  ; '${charLit.value}'")
+            }
+            */
             DataType.STR -> {
                 val str = decl.value as StringLiteralValue
                 outputStringvar(decl, compTarget.encodeString(str.value, str.altEncoding).plus(0))

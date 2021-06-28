@@ -34,6 +34,12 @@ internal class AssignmentAsmGen(private val program: Program, private val asmgen
 
     fun translateNormalAssignment(assign: AsmAssignment) {
         when(assign.source.kind) {
+            SourceStorageKind.LITERALCHAR -> {
+                // simple case: assign a constant character
+                val lit = assign.source.expression as CharLiteral
+                val num = asmgen.compTarget.encodeString(lit.value.toString(), lit.altEncoding)[0]
+                assignConstantByte(assign.target, num)
+            }
             SourceStorageKind.LITERALNUMBER -> {
                 // simple case: assign a constant number
                 val num = assign.source.number!!.number
@@ -1707,6 +1713,7 @@ internal class AssignmentAsmGen(private val program: Program, private val asmgen
             when(target.kind) {
                 TargetStorageKind.VARIABLE -> {
                     asmgen.out("  stz  ${target.asmVarname} ")
+
                 }
                 TargetStorageKind.MEMORY -> {
                     asmgen.out("  lda  #${byte.toHex()}")

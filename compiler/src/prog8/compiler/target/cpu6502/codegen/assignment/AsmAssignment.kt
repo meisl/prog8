@@ -18,6 +18,7 @@ internal enum class TargetStorageKind {
 }
 
 internal enum class SourceStorageKind {
+    LITERALCHAR,
     LITERALNUMBER,
     VARIABLE,
     ARRAY,
@@ -122,20 +123,21 @@ internal class AsmAssignSource(val kind: SourceStorageKind,
     companion object {
         fun fromAstSource(indexer: ArrayIndex, program: Program, asmgen: AsmGen): AsmAssignSource = fromAstSource(indexer.indexExpr, program, asmgen)
 
-        fun fromAstSource(value: Expression, program: Program, asmgen: AsmGen): AsmAssignSource {
-            val cv = value.constValue(program)
+        fun fromAstSource(expr: Expression, program: Program, asmgen: AsmGen): AsmAssignSource {
+            val cv = expr.constValue(program)
             if(cv!=null)
                 return AsmAssignSource(SourceStorageKind.LITERALNUMBER, program, asmgen, cv.type, number = cv)
 
-            return when(value) {
-                is NumericLiteralValue -> AsmAssignSource(SourceStorageKind.LITERALNUMBER, program, asmgen, value.type, number = cv)
+            return when(expr) {
+                is CharLiteral -> AsmAssignSource(SourceStorageKind.LITERALCHAR, program, asmgen, DataType.CHAR, expression = expr)
+                is NumericLiteralValue -> AsmAssignSource(SourceStorageKind.LITERALNUMBER, program, asmgen, expr.type, number = cv)
                 is StringLiteralValue -> throw AssemblyError("string literal value should not occur anymore for asm generation")
                 is ArrayLiteralValue -> throw AssemblyError("array literal value should not occur anymore for asm generation")
                 is IdentifierReference -> {
-                    val dt = value.inferType(program).typeOrElse(DataType.UNDEFINED)
-                    val varName=asmgen.asmVariableName(value)
+                    val dt = expr.inferType(program).typeOrElse(DataType.UNDEFINED)
+                    val varName=asmgen.asmVariableName(expr)
                     // special case: "cx16.r[0-15]" are 16-bits virtual registers of the commander X16 system
-                    if(dt == DataType.UWORD && varName.lowercase().startsWith("cx16.r")) {
+                    if(dt == DataType.UWORD && varName.lowercase().startsWith("cx16.r")) { // TODO: very bad hack!
                         val regStr = varName.lowercase().substring(5)
                         val reg = RegisterOrPair.valueOf(regStr.uppercase())
                         AsmAssignSource(SourceStorageKind.REGISTER, program, asmgen, dt, register = reg)
@@ -144,25 +146,25 @@ internal class AsmAssignSource(val kind: SourceStorageKind,
                     }
                 }
                 is DirectMemoryRead -> {
-                    AsmAssignSource(SourceStorageKind.MEMORY, program, asmgen, DataType.UBYTE, memory = value)
+                    AsmAssignSource(SourceStorageKind.MEMORY, program, asmgen, DataType.UBYTE, memory = expr)
                 }
                 is ArrayIndexedExpression -> {
-                    val dt = value.inferType(program).typeOrElse(DataType.UNDEFINED)
-                    AsmAssignSource(SourceStorageKind.ARRAY, program, asmgen, dt, array = value)
+                    val dt = expr.inferType(program).typeOrElse(DataType.UNDEFINED)
+                    AsmAssignSource(SourceStorageKind.ARRAY, program, asmgen, dt, array = expr)
                 }
                 is FunctionCall -> {
-                    when (val sub = value.target.targetStatement(program)) {
+                    when (val sub = expr.target.targetStatement(program)) {
                         is Subroutine -> {
                             val returnType = sub.returntypes.zip(sub.asmReturnvaluesRegisters).firstOrNull { rr -> rr.second.registerOrPair != null || rr.second.statusflag!=null }?.first
                                     ?: throw AssemblyError("can't translate zero return values in assignment")
 
-                            AsmAssignSource(SourceStorageKind.EXPRESSION, program, asmgen, returnType, expression = value)
+                            AsmAssignSource(SourceStorageKind.EXPRESSION, program, asmgen, returnType, expression = expr)
                         }
                         is BuiltinFunctionStatementPlaceholder -> {
-                            val returnType = value.inferType(program)
+                            val returnType = expr.inferType(program)
                             if(!returnType.isKnown)
                                 throw AssemblyError("unknown dt")
-                            AsmAssignSource(SourceStorageKind.EXPRESSION, program, asmgen, returnType.typeOrElse(DataType.UNDEFINED), expression = value)
+                            AsmAssignSource(SourceStorageKind.EXPRESSION, program, asmgen, returnType.typeOrElse(DataType.UNDEFINED), expression = expr)
                         }
                         else -> {
                             throw AssemblyError("weird call")
@@ -170,10 +172,10 @@ internal class AsmAssignSource(val kind: SourceStorageKind,
                     }
                 }
                 else -> {
-                    val dt = value.inferType(program)
+                    val dt = expr.inferType(program)
                     if(!dt.isKnown)
                         throw AssemblyError("unknown dt")
-                    AsmAssignSource(SourceStorageKind.EXPRESSION, program, asmgen, dt.typeOrElse(DataType.UNDEFINED), expression = value)
+                    AsmAssignSource(SourceStorageKind.EXPRESSION, program, asmgen, dt.typeOrElse(DataType.UNDEFINED), expression = expr)
                 }
             }
         }

@@ -8,6 +8,7 @@ import prog8.ast.Node
 enum class DataType {
     UBYTE,              // pass by value
     BYTE,               // pass by value
+    CHAR,               // pass by value
     UWORD,              // pass by value
     WORD,               // pass by value
     FLOAT,              // pass by value
@@ -24,7 +25,8 @@ enum class DataType {
      */
     infix fun isAssignableTo(targetType: DataType) =
             when(this) {
-                UBYTE -> targetType in setOf(UBYTE, WORD, UWORD, FLOAT)
+                UBYTE -> targetType in setOf(CHAR, UBYTE, WORD, UWORD, FLOAT)
+                CHAR ->  targetType in setOf(CHAR, UBYTE, WORD, UWORD, FLOAT)
                 BYTE -> targetType in setOf(BYTE, WORD, FLOAT)
                 UWORD -> targetType in setOf(UWORD, FLOAT)
                 WORD -> targetType in setOf(WORD, FLOAT)
@@ -127,7 +129,7 @@ enum class VarDeclType {
     MEMORY
 }
 
-val ByteDatatypes = setOf(DataType.UBYTE, DataType.BYTE)
+val ByteDatatypes = setOf(DataType.CHAR, DataType.UBYTE, DataType.BYTE)
 val WordDatatypes = setOf(DataType.UWORD, DataType.WORD)
 val IntegerDatatypes = setOf(DataType.UBYTE, DataType.BYTE, DataType.UWORD, DataType.WORD)
 val NumericDatatypes = setOf(DataType.UBYTE, DataType.BYTE, DataType.UWORD, DataType.WORD, DataType.FLOAT)
@@ -139,7 +141,7 @@ val IterableDatatypes = setOf(
     DataType.ARRAY_UW, DataType.ARRAY_W,
     DataType.ARRAY_F
 )
-val PassByValueDatatypes = NumericDatatypes
+val PassByValueDatatypes = NumericDatatypes + setOf(DataType.CHAR)
 val PassByReferenceDatatypes = IterableDatatypes
 val ArrayToElementTypes = mapOf(
         DataType.STR to DataType.UBYTE,

@@ -58,17 +58,18 @@ object InferredTypes {
     private val unknownInstance = InferredType.unknown()
     private val voidInstance = InferredType.void()
     private val knownInstances = mapOf(
-            DataType.UBYTE to InferredType.known(DataType.UBYTE),
-            DataType.BYTE to InferredType.known(DataType.BYTE),
-            DataType.UWORD to InferredType.known(DataType.UWORD),
-            DataType.WORD to InferredType.known(DataType.WORD),
-            DataType.FLOAT to InferredType.known(DataType.FLOAT),
-            DataType.STR to InferredType.known(DataType.STR),
-            DataType.ARRAY_UB to InferredType.known(DataType.ARRAY_UB),
-            DataType.ARRAY_B to InferredType.known(DataType.ARRAY_B),
-            DataType.ARRAY_UW to InferredType.known(DataType.ARRAY_UW),
-            DataType.ARRAY_W to InferredType.known(DataType.ARRAY_W),
-            DataType.ARRAY_F to InferredType.known(DataType.ARRAY_F)
+        DataType.CHAR to InferredType.known(DataType.CHAR),
+        DataType.UBYTE to InferredType.known(DataType.UBYTE),
+        DataType.BYTE to InferredType.known(DataType.BYTE),
+        DataType.UWORD to InferredType.known(DataType.UWORD),
+        DataType.WORD to InferredType.known(DataType.WORD),
+        DataType.FLOAT to InferredType.known(DataType.FLOAT),
+        DataType.STR to InferredType.known(DataType.STR),
+        DataType.ARRAY_UB to InferredType.known(DataType.ARRAY_UB),
+        DataType.ARRAY_B to InferredType.known(DataType.ARRAY_B),
+        DataType.ARRAY_UW to InferredType.known(DataType.ARRAY_UW),
+        DataType.ARRAY_W to InferredType.known(DataType.ARRAY_W),
+        DataType.ARRAY_F to InferredType.known(DataType.ARRAY_F)
     )
 
     fun void() = voidInstance
