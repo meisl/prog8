@@ -4,20 +4,21 @@
 ; Note: this program is compatible with C64 and CX16.
 
 main {
-    const uword screenwidth = txt.DEFAULT_WIDTH
-    const uword screenheight = txt.DEFAULT_HEIGHT
+    const uword SCREEN_W = txt.DEFAULT_WIDTH
+    const uword SCREEN_H = txt.DEFAULT_HEIGHT
     uword anglex
     uword angley
-    ubyte color
+    ubyte ball_color
+    const ubyte ball_char = 81
 
-    sub start()  {
+    sub start() {
         repeat {
-            ubyte x = msb(sin8u(msb(anglex)) * screenwidth)
-            ubyte y = msb(cos8u(msb(angley)) * screenheight)
-            txt.setcc(x, y, 81, color)
-            anglex+=366
-            angley+=291
-            color++
+            ubyte x = msb(sin8u(msb(anglex)) * SCREEN_W)
+            ubyte y = msb(cos8u(msb(angley)) * SCREEN_H)
+            txt.setcc(x, y, ball_char, ball_color)
+            anglex += 366
+            angley += 291
+            ball_color++
         }
     }
 }
