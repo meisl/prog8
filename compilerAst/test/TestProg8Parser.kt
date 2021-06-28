@@ -9,6 +9,7 @@ import prog8.ast.base.DataType
 import prog8.ast.base.RegisterOrPair
 import prog8.ast.base.Statusflag
 import prog8.ast.expressions.BinaryExpression
+import prog8.ast.expressions.CharLiteral
 import prog8.ast.statements.*
 
 import prog8.parser.ParseError
@@ -254,12 +255,17 @@ class TestProg8Parser {
             }
         """.trimIndent())
         val module = parseModule(src)
-
         assertEquals(1, module.statements.size, "nr of stmts in module")
         val block = module.statements.first() as Block // TODO: we really should NOT have to cast to Block..!
         assertEquals(1, block.statements.size, "nr of stmts in block")
         val decl = block.statements.first() as VarDecl
-        assertEquals(block, decl.parent, "parent of decl")
+        val declRhs = decl.value!!
+
+        assertIs<CharLiteral>(declRhs)
+        assertEquals('x', (declRhs as CharLiteral).value)
+        assertSame(module, block.parent, "parent of block")
+        assertSame(block, decl.parent, "parent of decl")
+        assertSame(decl, declRhs.parent, "parent of decl's rhs")
     }
 
 
