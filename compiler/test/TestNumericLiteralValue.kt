@@ -14,7 +14,9 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 
-
+/**
+ * TODO: move this to module compilerAst - class NumericLiteralValue is an AST Node
+ */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class TestNumericLiteralValue {
 
