@@ -73,6 +73,7 @@ ARRAYSIG :
     ;
 
 cpuregister: 'A' | 'X' | 'Y';
+// TODO: split up into cpuReg, statusFlag, cpuRegPair, virtualReg
 register: 'A' | 'X' | 'Y' | 'AX' | 'AY' | 'XY' | 'Pc' | 'Pz' | 'Pn' | 'Pv' | 'R0' | 'R1' | 'R2' | 'R3' | 'R4' | 'R5' | 'R6' | 'R7' | 'R8' | 'R9' | 'R10' | 'R11' | 'R12' | 'R13' | 'R14' | 'R15';
 
 // A module (file) consists of zero or more directives or blocks, in any order.
@@ -119,9 +120,13 @@ statement :
 variabledeclaration :
 	varinitializer
 	| vardecl
-	| constdecl
-	| memoryvardecl
+	| const_keyword = 'const' varinitializer
+	| memory = ADDRESS_OF varinitializer
     ;
+
+vardecl: datatype SHARED? ZEROPAGE? (arrayindex | ARRAYSIG) ? varname=identifier ;
+
+varinitializer : vardecl '=' expression ;
 
 
 subroutinedeclaration :
@@ -142,14 +147,6 @@ directive :
         ;
 
 directivearg : stringliteral | identifier | integerliteral ;
-
-vardecl: datatype SHARED? ZEROPAGE? (arrayindex | ARRAYSIG) ? varname=identifier ;
-
-varinitializer : vardecl '=' expression ;
-
-constdecl: 'const' varinitializer ;
-
-memoryvardecl: ADDRESS_OF varinitializer;
 
 datatype:  'ubyte' | 'byte' | 'uword' | 'word' | 'float' | 'str' ;
 
@@ -224,7 +221,7 @@ scoped_identifier :  NAME ('.' NAME)* ;
 
 integerliteral :  intpart=(DEC_INTEGER | HEX_INTEGER | BIN_INTEGER) ;
 
-booleanliteral :  'true' | 'false' ;
+booleanliteral :  'true' | 'false' ; // TODO: make boolean value right here
 
 arrayliteral :  '[' EOL? expression (',' EOL? expression)* EOL? ']' ;       // you can split the values over several lines
 
@@ -248,22 +245,22 @@ inlineasm :  '%asm' INLINEASMBLOCK;
 
 inline: 'inline';
 
-subroutine :
+subroutine: // TODO: split into signature and body, rename signature to to subSig_partial (or so)
 	inline? 'sub' identifier '(' sub_params? ')' sub_return_part?  (statement_block EOL)
 	;
 
-sub_return_part : '->' sub_returns  ;
+sub_return_part : '->' sub_returns  ; // TODO: inline into rule subroutine
 
-statement_block :
+statement_block : // TODO: inline into rule subroutine
 	'{' EOL
 		(statement | EOL) *
 	'}'
 	;
 
 
-sub_params :  vardecl (',' EOL? vardecl)* ;
+sub_params :  vardecl (',' EOL? vardecl)* ; // TODO: inline into rule subroutine
 
-sub_returns :  datatype (',' EOL? datatype)*  ;
+sub_returns :  datatype (',' EOL? datatype)*  ; // TODO: inline into rule subroutine
 
 asmsubroutine :
     inline? 'asmsub' asmsub_decl  statement_block
@@ -273,21 +270,31 @@ romsubroutine :
     'romsub' integerliteral '=' asmsub_decl
     ;
 
-asmsub_decl : identifier '(' asmsub_params? ')' asmsub_clobbers? asmsub_returns? ;
 
-asmsub_params :  asmsub_param (',' EOL? asmsub_param)* ;
+asmsub_decl: // TODO: rename to subSig_full (or so)
+    identifier
 
-asmsub_param :  vardecl '@' register ;      // A,X,Y,AX,AY,XY,Pc,Pz,Pn,Pv allowed.
+    // parameters: non-empty list of "vardecl@regOrFlag, separated by comma:
+    '(' ( paramDecls += vardecl '@' paramRegs += register
+        (',' EOL? paramDecls += vardecl '@' paramRegs += register)* )?
+    ')'
 
-asmsub_clobbers : 'clobbers' '(' clobber? ')' ;
+    // "clobbers" spec (which cpu regs are destroyed):
+    (   'clobbers' '(' // non-empty list of cpu regs, separated by comma
+            ( clobberRegs += cpuregister
+                (',' clobberRegs += cpuregister)* )?
+        ')'
+    )? // clobbers spec may also be omitted entirely
 
-clobber :  cpuregister (',' cpuregister)* ;       // A,X,Y allowed
+    // return values spec:
+    ( '->' // non-empty list of "type@regOrFlag, separated by comma:
+        retTypes += datatype '@' retRegs += register
+            (',' EOL? retTypes += datatype '@' retRegs += register)*
+    )? // return values spec may also be omitted entirely
+    ;
 
-asmsub_returns :  '->' asmsub_return (',' EOL? asmsub_return)* ;
 
-asmsub_return :  datatype '@' register ;     // A,X,Y,AX,AY,XY,Pc,Pz,Pn,Pv allowed
-
-
+// TODO: check for "dangling else" problem
 if_stmt :  'if' expression EOL? (statement | statement_block) EOL? else_part?  ; // statement is constrained later
 
 else_part :  'else' EOL? (statement | statement_block) ;   // statement is constrained later
@@ -309,4 +316,3 @@ repeatloop:  'repeat' expression? EOL? (statement | statement_block) ;
 whenstmt: 'when' expression '{' EOL (when_choice | EOL) * '}' EOL? ;
 
 when_choice:  (expression_list | 'else' ) '->' (statement | statement_block ) ;
-
