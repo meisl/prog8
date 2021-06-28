@@ -52,7 +52,9 @@ object Prog8Parser {
         }
 
         val module = parseTree.toAst(moduleName, false, source = Path(""))
-
+        for (statement in module.statements) {
+            statement.linkParents(module)
+        }
         // TODO: use Module ctor directly
         // val module = Module(moduleName, statements = listOf<Statement>().toMutableList(), position = null, isLibraryModule = false, source = null)
 

@@ -1,12 +1,14 @@
 package prog8tests
 
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import kotlin.test.*
 import kotlin.io.path.*
 
 import prog8.ast.base.DataType
 import prog8.ast.base.RegisterOrPair
 import prog8.ast.base.Statusflag
+import prog8.ast.expressions.BinaryExpression
 import prog8.ast.statements.*
 
 import prog8.parser.ParseError
@@ -202,6 +204,49 @@ class TestProg8Parser {
 
 
     @Test
+    fun testParentNodesInitialized() {
+        val src = SourceCode.of(
+            """
+            %zeropage basicsafe
+            main {
+                ubyte x = 23
+                sub start() -> ubyte {
+                    return x * x
+                }
+            }
+        """.trimIndent()
+        )
+        val module = parseModule(src)
+        val directive = module.statements.filterIsInstance<Directive>()[0]
+        val directiveArg = directive.args[0]
+        val mainBlock = module.statements.filterIsInstance<Block>()[0]
+        val declX = mainBlock.statements.filterIsInstance<VarDecl>()[0]
+        val declXrhs = declX.value
+        val startSub = mainBlock.statements.filterIsInstance<Subroutine>()[0]
+        val returnStmt = startSub.statements.filterIsInstance<Return>()[0]
+        val retValue = returnStmt.value as BinaryExpression
+        val left = retValue.left
+        val right = retValue.right
+
+        assertThrows<UninitializedPropertyAccessException> {
+            assertNull(
+                module.parent,
+                "most top-level nodes from parser are Modules - with not-yet-initialzed parent"
+            )
+        }
+        assertSame(expected = module, directive.parent)
+        assertSame(expected = directive, directiveArg.parent)
+        assertSame(expected = module, mainBlock.parent)
+        assertSame(expected = mainBlock, declX.parent)
+        assertSame(expected = declX, declXrhs!!.parent)
+        assertSame(expected = mainBlock, startSub.parent)
+        assertSame(expected = startSub, returnStmt.parent)
+        assertSame(expected = returnStmt, retValue.parent)
+        assertSame(expected = retValue, left.parent)
+        assertSame(expected = retValue, right.parent)
+    }
+
+    @Test
     fun testVarDeclWithCharLiteral() {
         val src = SourceCode.of("""
             main {
@@ -212,7 +257,6 @@ class TestProg8Parser {
 
         assertEquals(1, module.statements.size, "nr of stmts in module")
         val block = module.statements.first() as Block // TODO: we really should NOT have to cast to Block..!
-        assertEquals(module, block.parent, "parent of block")
         assertEquals(1, block.statements.size, "nr of stmts in block")
         val decl = block.statements.first() as VarDecl
         assertEquals(block, decl.parent, "parent of decl")
