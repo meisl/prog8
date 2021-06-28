@@ -4,8 +4,13 @@ import org.junit.jupiter.api.Test
 import kotlin.test.*
 import kotlin.io.path.*
 
-import prog8.ast.statements.Block
+import prog8.ast.base.DataType
+import prog8.ast.base.RegisterOrPair
+import prog8.ast.base.Statusflag
+import prog8.ast.statements.*
+
 import prog8.parser.ParseError
+import prog8.parser.Prog8Parser
 import prog8.parser.Prog8Parser.parseModule
 import prog8.parser.SourceCode
 
@@ -50,8 +55,6 @@ class TestProg8Parser {
         val nlWin = "\r\n"
         val nlUnix = "\n"
         val nlMac = "\r"
-
-        //parseModule(Paths.get("test", "fixtures", "mac_newlines.p8").toAbsolutePath())
 
         // a good mix of all kinds of newlines:
         val srcText =
@@ -197,16 +200,132 @@ class TestProg8Parser {
         }
     }
 
+
     @Test
-    fun testProg8Ast() {
-        val module = parseModule(SourceCode.of("""
-        main {
-            sub start() {
-                return
+    fun testVarDeclWithCharLiteral() {
+        val src = SourceCode.of("""
+            main {
+                ubyte c = 'x'   ; TODO: introduce type char, do not necessitate an implicit (!) encoding just yet (=fixed at *parsing*)
             }
-        }
-        """))
-        assertIs<Block>(module.statements.first())
-        assertEquals("main", (module.statements.first() as Block).name)
+        """.trimIndent())
+        val module = parseModule(src)
+
+        assertEquals(1, module.statements.size, "nr of stmts in module")
+        val block = module.statements.first() as Block // TODO: we really should NOT have to cast to Block..!
+        assertEquals(module, block.parent, "parent of block")
+        assertEquals(1, block.statements.size, "nr of stmts in block")
+        val decl = block.statements.first() as VarDecl
+        assertEquals(block, decl.parent, "parent of decl")
     }
+
+
+    @Test
+    fun testAsmSub() {
+        val src = SourceCode.of("""
+            main {
+                asmsub foo() {
+                }
+                asmsub bar(ubyte isIt @Pz) clobbers(A) -> ubyte @ Pc {
+                }
+                inline asmsub qmbl(byte one @A, ; let's just split it up over two lines
+                    uword two @XY) -> uword @XY {
+                    %asm {{
+                        txy
+                        tax
+                    }}
+                }
+            }
+        """.trimIndent())
+        val module = parseModule(src)
+        val blocks = module.statements.filterIsInstance<Block>()
+        assertEquals(1, blocks.size, "nr of blocks in module")
+        val subs = blocks[0].statements.filterIsInstance<Subroutine>()
+        assertEquals(3, subs.size, "nr of subs in block")
+
+        with (subs[0]) {
+            assertTrue(isAsmSubroutine)
+            assertFalse(inline)
+            assertEquals("foo", name, "name of sub")
+            assertEquals("main.foo", scopedname, "scopedname of sub $name")
+            assertEquals(0, parameters.size, "nr of params of sub $name")
+            assertEquals(0, returntypes.size, "nr of returntypes of sub $name")
+            assertEquals(0, asmReturnvaluesRegisters.size, "nr of returnregs of sub $name")
+            assertEquals(0, statements.size, "nr of stmts in sub $name")
+        }
+        with (subs[1]) {
+            assertTrue(isAsmSubroutine)
+            assertFalse(inline)
+            assertEquals("bar", name, "name of sub")
+            assertEquals("main.bar", scopedname, "scopedname of sub $name")
+            assertEquals(1, parameters.size, "nr of params of sub $name")
+            assertEquals("isIt", parameters[0].name, "name of 1st param of sub $name")
+            assertEquals(DataType.UBYTE, parameters[0].type, "type of 1st param of sub $name")
+            assertEquals(Statusflag.Pz, asmParameterRegisters[0].statusflag, "flag/reg of 1st param of sub $name")
+            assertEquals(1, returntypes.size, "nr of returntypes of sub $name")
+            assertEquals(DataType.UBYTE, returntypes[0], "type of 1st return value")
+            assertEquals(1, asmReturnvaluesRegisters.size, "nr of returnregs of sub $name")
+            assertEquals(Statusflag.Pc, asmReturnvaluesRegisters[0].statusflag, "reg/flag of 1st return value")
+            assertEquals(0, statements.size, "nr of stmts in sub $name")
+        }
+        with (subs[2]) {
+            assertTrue(isAsmSubroutine)
+            assertTrue(inline)
+            assertEquals("qmbl", name, "name of sub")
+            assertEquals("main.qmbl", scopedname, "scopedname of sub $name")
+            assertEquals(2, parameters.size, "nr of params of sub $name")
+            assertEquals("one", parameters[0].name, "name of 1st param of sub $name")
+            assertEquals(DataType.BYTE, parameters[0].type, "type of 1st param of sub $name")
+            assertEquals(RegisterOrPair.A, asmParameterRegisters[0].registerOrPair, "flag/reg of 1st param of sub $name")
+            assertEquals("two", parameters[1].name, "name of 2nd param of sub $name")
+            assertEquals(DataType.UWORD, parameters[1].type, "type of 2nd param of sub $name")
+            assertEquals(RegisterOrPair.XY, asmParameterRegisters[1].registerOrPair, "flag/reg of 2nd param of sub $name")
+            assertEquals(1, returntypes.size, "nr of returntypes of sub $name")
+            assertEquals(DataType.UWORD, returntypes[0], "type of 1st return value")
+            assertEquals(1, asmReturnvaluesRegisters.size, "nr of returnregs of sub $name")
+            assertEquals(RegisterOrPair.XY, asmReturnvaluesRegisters[0].registerOrPair, "reg/flag of 1st return value")
+            assertEquals(1, statements.size, "nr of stmts in sub $name")
+        }
+    }
+
+    @Test
+    fun testExample_Swirl() {
+        val src = SourceCode.of("""
+            %import textio
+            %zeropage basicsafe
+    
+            ; Note: this program is compatible with C64 and CX16.
+    
+            main {
+                const uword SCREEN_W = txt.DEFAULT_WIDTH
+                const uword SCREEN_H = txt.DEFAULT_HEIGHT
+                uword anglex
+                        uword angley
+                        ubyte ball_color
+                        const ubyte ball_char = 81
+    
+                sub start() {
+                    repeat {
+                        ubyte x = msb(sin8u(msb(anglex)) * SCREEN_W)
+                        ubyte y = msb(cos8u(msb(angley)) * SCREEN_H)
+                        txt.setcc(x, y, ball_char, ball_color)
+                        anglex += 366
+                        angley += 291
+                        ball_color++
+                    }
+                }
+            }
+            """.trimIndent()
+        )
+        val module = parseModule(src)
+
+        assertEquals(3, module.statements.size)
+        val blocks = module.statements.filterIsInstance<Block>()
+        assertEquals(1, blocks.size, "nr of blocks in module")
+        assertEquals(7, blocks[0].statements.size, "nr of stmts in main block")
+        val subs = blocks[0].statements.filterIsInstance<Subroutine>()
+        assertEquals(1, subs.size, "nr of subs in main block")
+        assertEquals(1, subs[0].statements.size, "nr of stmts in sub")
+        assertIs<RepeatLoop>(subs[0].statements[0], "1st stmt in sub")
+    }
+
 }
