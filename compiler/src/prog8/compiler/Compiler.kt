@@ -1,9 +1,6 @@
 package prog8.compiler
 
-import prog8.ast.AstToSourceCode
-import prog8.ast.IBuiltinFunctions
-import prog8.ast.IMemSizer
-import prog8.ast.Program
+import prog8.ast.*
 import prog8.ast.base.AstException
 import prog8.ast.base.Position
 import prog8.ast.expressions.Expression
@@ -258,6 +255,7 @@ private fun processAst(programAst: Program, errors: IErrorReporter, compilerOpti
     errors.report()
     programAst.reorderStatements(errors)
     errors.report()
+    programAst.charLiteralsToUByteLiterals(errors, compilerOptions.compTarget as IStringEncoding)
     programAst.addTypecasts(errors)
     errors.report()
     programAst.variousCleanups(programAst, errors)
